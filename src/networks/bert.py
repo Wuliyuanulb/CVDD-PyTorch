@@ -13,7 +13,9 @@ class BERT(nn.Module):
         assert pretrained_model_name in ('bert-base-uncased', 'bert-large-uncased', 'bert-base-cased')
 
         # Load pre-trained BERT model
-        self.bert = BertModel.from_pretrained(pretrained_model_name=pretrained_model_name, cache_dir=cache_dir)
+        # self.bert = BertModel.from_pretrained(pretrained_model_name=pretrained_model_name, cache_dir=cache_dir)
+        self.bert = BertModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name, cache_dir=cache_dir)
+
         self.embedding = self.bert.embeddings
         self.embedding_size = self.embedding.word_embeddings.embedding_dim
 
