@@ -3,6 +3,7 @@ import torch
 import logging
 import random
 import numpy as np
+import ast
 
 from utils.config import Config
 from utils.visualization import plot_matrix_heatmap, plot_joyplot
@@ -10,6 +11,13 @@ from utils.misc import print_text_samples, print_top_words, get_correlation_matr
 from cvdd import CVDD
 from datasets.main import load_dataset
 
+
+class PythonLiteralOption(click.Option):
+    def type_cast_value(self, ctx, value):
+        try:
+            return ast.literal_eval(value)
+        except:
+            raise click.BadParameter(value)
 
 ################################################################################
 # Settings
@@ -54,15 +62,18 @@ from datasets.main import load_dataset
               help='Number of workers for data loading. 0 means that the data will be loaded in the main process.')
 @click.option('--n_threads', type=int, default=0,
               help='Sets the number of OpenMP threads used for parallelizing CPU operations')
-@click.option('--normal_class', type=int, default=0,
+
+# @click.option('--normal_class', type=list, default=[0],
+#               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
+@click.option('--normal_class', cls=PythonLiteralOption, default=[],
               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
+
 def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, device, seed, tokenizer, clean_txt,
          embedding_size, pretrained_model, ad_score, n_attention_heads, attention_size, lambda_p, alpha_scheduler,
          optimizer_name, lr, n_epochs, lr_milestone, batch_size, weight_decay, n_jobs_dataloader, n_threads,
          normal_class):
     """
     Context Vector Data Description (CVDD): An unsupervised anomaly detection method for text.
-
     :arg DATASET_NAME: Name of the dataset to load.
     :arg NET_NAME: Name of the neural network to use.
     :arg XP_PATH: Export path for logging the experiment.
@@ -90,7 +101,9 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
 
     # Print experimental setup
     logger.info('Dataset: %s' % dataset_name)
-    logger.info('Normal class: %d' % normal_class)
+    # logger.info('Normal class: %d' % normal_class)
+    logger.info(str(('Normal class: ', normal_class)))
+
     logger.info('Network: %s' % net_name)
     logger.info('Tokenizer: %s' % cfg.settings['tokenizer'])
     logger.info('Clean text in pre-processing: %s' % cfg.settings['clean_txt'])
