@@ -16,8 +16,9 @@ import nltk
 
 class Reuters_Dataset(TorchnlpDataset):
 
-    def __init__(self, root: str, normal_class=0, tokenizer='spacy', use_tfidf_weights=False, append_sos=False,
+    def __init__(self, root: str, normal_class=[0], tokenizer='spacy', use_tfidf_weights=False, append_sos=False,
                  append_eos=False, clean_txt=False):
+
         super().__init__(root)
 
         self.n_classes = 2  # 0: normal, 1: outlier
@@ -35,9 +36,14 @@ class Reuters_Dataset(TorchnlpDataset):
         #     'sun-oil', 'sunseed', 'tea', 'tin', 'trade', 'veg-oil', 'wheat', 'wpi', 'yen', 'zinc'
         # ]
 
-        self.normal_classes = [classes[normal_class]]
-        del classes[normal_class]
+        self.normal_classes = [classes[i] for i in normal_class]
+        for n_class in normal_class:
+            del classes[n_class]
         self.outlier_classes = classes
+
+        # self.normal_classes = [classes[normal_class]]
+        # del classes[normal_class]
+        # self.outlier_classes = classes
 
         # Load the reuters dataset
         self.train_set, self.test_set = reuters_dataset(directory=root, train=True, test=True, clean_txt=clean_txt)
