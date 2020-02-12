@@ -38,3 +38,8 @@ class BERT(nn.Module):
 class MineBert(nn.Module):
     """this is actually a test, but need to do"""
     CONSTANT = 'wuliyuan'
+
+
+class AnotherBert(nn.Module):
+    """this is anotner tets..."""
+    LIYUAN = 'hahaha'
