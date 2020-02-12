@@ -33,3 +33,8 @@ class BERT(nn.Module):
         hidden = hidden.transpose(0, 1)
 
         return hidden
+
+
+class MineBert(nn.Module):
+    """this is actually a test, but need to do"""
+    CONSTANT = 'wuliyuan'
