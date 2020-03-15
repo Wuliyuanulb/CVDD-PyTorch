@@ -11,14 +11,13 @@ class XLNET(nn.Module):
         # Check if choice of pretrained model is valid
         assert pretrained_model_name in ('xlnet-base-cased')
 
-        # Load pre-trained BERT model
-        # self.bert = BertModel.from_pretrained(pretrained_model_name=pretrained_model_name, cache_dir=cache_dir)
+        # Load pre-trained XLnet model
         self.xlnet = XLNetModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name, cache_dir=cache_dir)
 
-        self.embedding = self.xlnet.embeddings
-        self.embedding_size = self.embedding.word_embeddings.embedding_dim
+        # self.embedding = self.xlnet.embeddings
+        # self.embedding_size = self.embedding.word_embeddings.embedding_dim
 
-        # Remove BERT model parameters from optimization
+        # Remove XLnet model parameters from optimization
         for param in self.xlnet.parameters():
             param.requires_grad = False
 
