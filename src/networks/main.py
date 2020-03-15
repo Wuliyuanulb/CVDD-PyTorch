@@ -21,7 +21,7 @@ def build_network(net_name, dataset, embedding_size=None, pretrained_model=None,
     # Load pre-trained model if specified
     if pretrained_model is not None:
         # if word vector model
-        if pretrained_model in ['GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en', 'xlnet']:
+        if pretrained_model in ['GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en']:
             word_vectors, embedding_size = load_word_vectors(pretrained_model, embedding_size, word_vectors_cache)
             embedding = MyEmbedding(vocab_size, embedding_size, update_embedding, embedding_reduction,
                                     use_tfidf_weights, normalize_embedding)
