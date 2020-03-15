@@ -1,5 +1,6 @@
 from .cvdd_Net import CVDDNet
 from .bert import BERT
+from .xlnet import XLNET
 from base.embedding import MyEmbedding
 from utils.word_vectors import load_word_vectors
 
@@ -20,7 +21,7 @@ def build_network(net_name, dataset, embedding_size=None, pretrained_model=None,
     # Load pre-trained model if specified
     if pretrained_model is not None:
         # if word vector model
-        if pretrained_model in ['GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en']:
+        if pretrained_model in ['GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en', 'xlnet']:
             word_vectors, embedding_size = load_word_vectors(pretrained_model, embedding_size, word_vectors_cache)
             embedding = MyEmbedding(vocab_size, embedding_size, update_embedding, embedding_reduction,
                                     use_tfidf_weights, normalize_embedding)
@@ -30,6 +31,8 @@ def build_network(net_name, dataset, embedding_size=None, pretrained_model=None,
         # if language model
         if pretrained_model in ['bert']:
             embedding = BERT()
+        if pretrained_model in ['xlnet']:
+            embedding = XLNET()
     else:
         if embedding_size is not None:
             embedding = MyEmbedding(vocab_size, embedding_size, update_embedding, embedding_reduction,

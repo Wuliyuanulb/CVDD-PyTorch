@@ -38,7 +38,7 @@ class PythonLiteralOption(click.Option):
 @click.option('--embedding_size', type=int, default=None, help='Size of the word vector embedding.')
 @click.option('--pretrained_model', default=None,
               type=click.Choice([None, 'GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en',
-                                 'bert']),
+                                 'bert', 'xlnet']),
               help='Load pre-trained word vectors or language models to initialize the word embeddings.')
 @click.option('--ad_score', default='context_dist_mean', type=click.Choice(['context_dist_mean', 'context_best']),
               help='Choose the AD score function')
