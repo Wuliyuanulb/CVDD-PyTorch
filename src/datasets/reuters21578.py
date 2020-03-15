@@ -6,7 +6,7 @@ from torchnlp.encoders.text.default_reserved_tokens import DEFAULT_SOS_TOKEN
 from torch.utils.data import Subset
 from nltk.corpus import reuters
 from nltk import word_tokenize
-from utils.text_encoders import MyBertTokenizer
+from utils.text_encoders import MyBertTokenizer, MyXLNetTokenizer
 from utils.misc import clean_text
 from .preprocessing import compute_tfidf_weights
 
@@ -86,6 +86,8 @@ class Reuters_Dataset(TorchnlpDataset):
             self.encoder = SpacyEncoder(text_corpus, min_occurrences=3, append_eos=append_eos)
         if tokenizer == 'bert':
             self.encoder = MyBertTokenizer.from_pretrained('bert-base-uncased', cache_dir=root)
+        if tokenizer == 'xlnet':
+            self.encoder = MyXLNetTokenizer.from_pretrained('xlnet-base-cased', cache_dir=root)
 
         # Encode
         for row in datasets_iterator(self.train_set, self.test_set):

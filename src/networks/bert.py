@@ -18,6 +18,7 @@ class BERT(nn.Module):
 
         self.embedding = self.bert.embeddings
         self.embedding_size = self.embedding.word_embeddings.embedding_dim
+        print('****embedding_size:', self.embedding_size)
 
         # Remove BERT model parameters from optimization
         for param in self.bert.parameters():

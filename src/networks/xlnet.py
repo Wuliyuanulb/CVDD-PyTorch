@@ -15,7 +15,7 @@ class XLNET(nn.Module):
         self.xlnet = XLNetModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name, cache_dir=cache_dir)
 
         # self.embedding = self.xlnet.embeddings
-        # self.embedding_size = self.embedding.word_embeddings.embedding_dim
+        self.embedding_size = self.xlnet.d_model
 
         # Remove XLnet model parameters from optimization
         for param in self.xlnet.parameters():
@@ -25,7 +25,8 @@ class XLNET(nn.Module):
         # x.shape = (sentence_length, batch_size)
 
         self.xlnet.eval()  # make sure bert is in eval() mode
-        hidden, _ = self.xlnet(x.transpose(0, 1), output_all_encoded_layers=False)  # output only last layer
+        hidden = self.xlnet(x.transpose(0, 1))[0]  # output only last layer
+        # print('hidden:**', hidden)
         # hidden.shape = (batch_size, sentence_length, hidden_size)
 
         # Change to hidden.shape = (sentence_length, batch_size, hidden_size) align output with word embeddings

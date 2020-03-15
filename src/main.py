@@ -33,7 +33,8 @@ class PythonLiteralOption(click.Option):
               help='Model file path (default: None).')
 @click.option('--device', type=str, default='cuda', help='Computation device to use ("cpu", "cuda", "cuda:2", etc.).')
 @click.option('--seed', type=int, default=-1, help='Set seed. If -1, use randomization.')
-@click.option('--tokenizer', default='spacy', type=click.Choice(['spacy', 'bert']), help='Select text tokenizer.')
+@click.option('--tokenizer', default='spacy', type=click.Choice(['spacy', 'bert', 'xlnet']),
+              help='Select text tokenizer.')
 @click.option('--clean_txt', is_flag=True, help='Specify if text should be cleaned in a pre-processing step.')
 @click.option('--embedding_size', type=int, default=None, help='Size of the word vector embedding.')
 @click.option('--pretrained_model', default=None,
