@@ -47,6 +47,7 @@ class Reuters_Dataset(TorchnlpDataset):
 
         # Load the reuters dataset
         self.train_set, self.test_set = reuters_dataset(directory=root, train=True, test=True, clean_txt=clean_txt)
+        # train_set, test_set: [{'text': "lalalala", 'label': ['gold'], {}, ..., ]
 
         # Pre-process
         self.train_set.columns.add('index')
@@ -151,9 +152,8 @@ def reuters_dataset(directory='../data', train=True, test=False, clean_txt=False
                 'text': text,
                 'label': labels,
             })
-
+        # examples [{'text': "lalalala", 'label': ['gold'], {}, ..., ]
         ret.append(Dataset(examples))
-
     if len(ret) == 1:
         return ret[0]
     else:

@@ -275,10 +275,17 @@ def initialize_context_vectors(net, train_loader, device):
     X = ()
     for data in train_loader:
         _, text, _, _ = data
-        text = text.to(device)
+        text_tensor = text.to(torch.int64)
+
+        # text_numpy = text.numpy()
+        # print('text.shape', text.shape)
+        # np.savetxt('/Users/wuliyuan/Desktop/textout.txt', text_numpy.astype(int), fmt='%i', delimiter=',')
+
+        # text = text.to(device)
         # text.shape = (sentence_length, batch_size)
 
-        X_batch = net.pretrained_model(text)
+        # net.pretrained_model is Bert()
+        X_batch = net.pretrained_model(text_tensor)
         # X_batch.shape = (sentence_length, batch_size, embedding_size)
 
         # compute mean and normalize

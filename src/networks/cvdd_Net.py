@@ -31,7 +31,7 @@ class CVDDNet(BaseNet):
 
     def forward(self, x):
         # x.shape = (sentence_length, batch_size)
-
+        #self.pretrained_model = BERT(), XLNET()
         hidden = self.pretrained_model(x)
         # hidden.shape = (sentence_length, batch_size, hidden_size)
 

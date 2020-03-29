@@ -1,6 +1,6 @@
 import torch.nn as nn
-
 from transformers import XLNetModel, XLNetForSequenceClassification, XLNetTokenizer
+
 
 class XLNET(nn.Module):
     """Class for loading pretrained BERT model."""

@@ -146,6 +146,13 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
     dataset = load_dataset(dataset_name, data_path, normal_class, cfg.settings['tokenizer'],
                            clean_txt=cfg.settings['clean_txt'])
 
+    # dataset Reuters_Dataset:
+    # dataset.train_set, columns: text, label, index, weight
+    # dataset.test_set
+    # self.encode: MyBertTokenizer.from_pretrained('bert-base-uncased', cache_dir=root)
+
+    logger.info("finish Load data")
+
     # Initialize CVDD model and set word embedding
     cvdd = CVDD(cfg.settings['ad_score'])
     cvdd.set_network(net_name=net_name,
@@ -154,6 +161,8 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
                      embedding_size=cfg.settings['embedding_size'],
                      attention_size=cfg.settings['attention_size'],
                      n_attention_heads=cfg.settings['n_attention_heads'])
+
+    logger.info('finish cvdd.set_network')
 
     # If specified, load model parameters from already trained model
     if load_model:
@@ -172,6 +181,8 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
                weight_decay=cfg.settings['weight_decay'],
                device=device,
                n_jobs_dataloader=n_jobs_dataloader)
+
+    logger.info('finished CVDD train')
 
     # Test model
     cvdd.test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
