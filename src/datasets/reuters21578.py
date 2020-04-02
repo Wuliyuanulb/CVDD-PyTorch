@@ -16,11 +16,13 @@ import nltk
 
 class Reuters_Dataset(TorchnlpDataset):
 
-    def __init__(self, root: str, normal_class=[0], tokenizer='spacy', use_tfidf_weights=False, append_sos=False,
+    def __init__(self, root: str, normal_class=None, tokenizer='spacy', use_tfidf_weights=False, append_sos=False,
                  append_eos=False, clean_txt=False):
 
         super().__init__(root)
 
+        if normal_class is None:
+            normal_class = [0]
         self.n_classes = 2  # 0: normal, 1: outlier
         classes = ['earn', 'acq', 'crude', 'trade', 'money-fx', 'interest', 'ship']
 

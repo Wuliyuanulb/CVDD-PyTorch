@@ -3,7 +3,7 @@ from torchnlp.word_to_vector import GloVe, FastText
 
 def load_word_vectors(word_vectors_name, embedding_size, word_vectors_cache='../data/word_vectors_cache'):
 
-    implemented_vector_embeddings = ('GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en', 'xlnet')
+    implemented_vector_embeddings = ('GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en')
     assert word_vectors_name in implemented_vector_embeddings
 
     word_vectors = None
