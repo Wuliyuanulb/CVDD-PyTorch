@@ -277,6 +277,9 @@ def initialize_context_vectors(net, train_loader, device):
         _, text, _, _ = data
         text_tensor = text.to(torch.int64)
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        text_tensor = text_tensor.to(device)
+
         # text_numpy = text.numpy()
         # print('text.shape', text.shape)
         # np.savetxt('/Users/wuliyuan/Desktop/textout.txt', text_numpy.astype(int), fmt='%i', delimiter=',')
