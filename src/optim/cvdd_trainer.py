@@ -351,6 +351,7 @@ def get_top_words_per_context(dataset, encoder, net, data_loader, device, k_top=
         for idx in idxs_top_k_sentence[context]:
 
             tokens = dataset[idx]['text']
+            tokens = torch.tensor(tokens)
             tokens = tokens.to(device)
             _, _, A = net(tokens.view((-1, 1)))
 
