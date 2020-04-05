@@ -90,7 +90,8 @@ class Reuters_Dataset(TorchnlpDataset):
         if tokenizer == 'bert':
             self.encoder = MyBertTokenizer.from_pretrained('bert-base-uncased', cache_dir=root)
         if tokenizer == 'xlnet':
-            self.encoder = MyXLNetTokenizer.from_pretrained('xlnet-base-cased', cache_dir=root)
+            vocabulary = '../data/xlnet_cache/xlnet-base-cased-spiece.model'
+            self.encoder = MyXLNetTokenizer(vocabulary)
 
         # Encode
         for row in datasets_iterator(self.train_set, self.test_set):

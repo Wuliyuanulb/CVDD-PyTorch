@@ -49,21 +49,21 @@ class MyXLNetTokenizer(XLNetTokenizer):
         super().__init__(vocab_file, do_lower_case=do_lower_case)
         self.append_eos = append_eos
 
-        self.vocab = self.sp_model
+        # self.vocab = self.sp_model
+        #
+        # self.itos = list(self.vocab.keys())
+        # self.stoi = {token: index for index, token in enumerate(self.itos)}
+        #
+        # self.vocab = self.itos
 
-        self.itos = list(self.vocab.keys())
-        self.stoi = {token: index for index, token in enumerate(self.itos)}
+    # def encode(self, text, eos_index=DEFAULT_EOS_INDEX, unknown_index=DEFAULT_UNKNOWN_INDEX):
+    #     output = super().encode(text)
+    #     return torch.LongTensor(output)
 
-        self.vocab = self.itos
-
-    def encode(self, text, eos_index=DEFAULT_EOS_INDEX, unknown_index=DEFAULT_UNKNOWN_INDEX):
-        output = super().encode(text)
-        return torch.LongTensor(output)
-
-    def decode(self, tensor):
-        """ Given a :class:`torch.Tensor`, returns a :class:`str` representing the decoded text.
-        Note that, depending on the tokenization method, the decoded version is not guaranteed to be
-        the original text.
-        """
-        tokens = [self.itos[index] for index in tensor]
-        return ' '.join(tokens)
+    # def decode(self, tensor):
+    #     """ Given a :class:`torch.Tensor`, returns a :class:`str` representing the decoded text.
+    #     Note that, depending on the tokenization method, the decoded version is not guaranteed to be
+    #     the original text.
+    #     """
+    #     tokens = [self.itos[index] for index in tensor]
+    #     return ' '.join(tokens)

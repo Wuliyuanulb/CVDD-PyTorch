@@ -28,6 +28,7 @@ class BERT(nn.Module):
 
         self.bert.eval()  # make sure bert is in eval() mode
         hidden, _ = self.bert(x.transpose(0, 1), output_all_encoded_layers=False)  # output only last layer
+        # ref
         # hidden.shape = (batch_size, sentence_length, hidden_size)
 
         # Change to hidden.shape = (sentence_length, batch_size, hidden_size) align output with word embeddings

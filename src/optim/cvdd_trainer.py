@@ -275,10 +275,12 @@ def initialize_context_vectors(net, train_loader, device):
     X = ()
     for data in train_loader:
         _, text, _, _ = data
-        text_tensor = text.to(torch.int64)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        text_tensor = text_tensor.to(device)
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+            text = text.to(device)
+        else:
+            text = text.to(torch.int64)
 
         # text_numpy = text.numpy()
         # print('text.shape', text.shape)
@@ -288,7 +290,7 @@ def initialize_context_vectors(net, train_loader, device):
         # text.shape = (sentence_length, batch_size)
 
         # net.pretrained_model is Bert()
-        X_batch = net.pretrained_model(text_tensor)
+        X_batch = net.pretrained_model(text)
         # X_batch.shape = (sentence_length, batch_size, embedding_size)
 
         # compute mean and normalize
