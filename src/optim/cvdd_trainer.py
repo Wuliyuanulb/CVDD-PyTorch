@@ -4,6 +4,7 @@ from networks.cvdd_Net import CVDDNet
 from sklearn.metrics import roc_auc_score
 from sklearn.cluster import KMeans
 from utils.vocab import Vocab
+from networks.lda import LDA
 
 import logging
 import time
@@ -24,11 +25,11 @@ class CVDDTrainer(BaseTrainer):
         self.c = None
 
         self.train_dists = None
-        self.train_att_matrix = None
+        self.train_attention_matrix = None
         self.train_top_words = None
 
         self.test_dists = None
-        self.test_att_matrix = None
+        self.test_attention_matrix = None
         self.test_top_words = None
         self.test_auc = 0.0
         self.test_scores = None
@@ -57,9 +58,14 @@ class CVDDTrainer(BaseTrainer):
         # Get train data loader
         train_loader, _ = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
 
-        # Initialize context vectors
-        net.c.data = torch.from_numpy(
-            initialize_context_vectors(net, train_loader, self.device)[np.newaxis, :]).to(self.device)
+        # # Initialize context vectors
+
+        # net.c.data = torch.from_numpy(
+        #     initialize_context_vectors(net, train_loader, self.device)[np.newaxis, :]).to(self.device)
+
+        lda_model = LDA(root='../data/corpora', n_topics=n_attention_heads, n_top_words=30)
+        centers = lda_model.lda_initialize_context_vectors(pretrained_model=net.pretrained_model)
+        net.c.data = torch.from_numpy(centers[np.newaxis, :]).to(self.device)
 
         # Set parameters and optimizer (Adam optimizer for now)
         parameters = filter(lambda p: p.requires_grad, net.parameters())
@@ -86,13 +92,20 @@ class CVDDTrainer(BaseTrainer):
 
             epoch_loss = 0.0
             n_batches = 0
-            att_matrix = np.zeros((n_attention_heads, n_attention_heads))
+            attention_matrix = np.zeros((n_attention_heads, n_attention_heads))
             dists_per_head = ()
             epoch_start_time = time.time()
             for data in train_loader:
                 _, text_batch, _, _ = data
                 text_batch = text_batch.to(self.device)
                 # text_batch.shape = (sentence_length, batch_size)
+                # text_batch:
+                # [
+                #   [0, 178, 67, 45, ..., 0, 0, 0],
+                #   [6, t67, 787, ...]
+                #   ...
+                #   numbers are actually the word undex in vocabulary
+                # ]
 
                 # Zero the network parameter gradients
                 optimizer.zero_grad()
@@ -110,12 +123,12 @@ class CVDDTrainer(BaseTrainer):
                 CCT = net.c @ net.c.transpose(1, 2)
                 P = torch.mean((CCT.squeeze() - I) ** 2)
 
-                # compute loss
+                # ====== compute loss =======
                 loss_P = self.lambda_p * P
                 loss_emp = torch.mean(torch.sum(scores, dim=1))
                 loss = loss_emp + loss_P
 
-                # Get scores
+                # ====== Get scores =====
                 dists_per_head += (cosine_dists.cpu().data.numpy(),)
 
                 loss.backward()
@@ -124,7 +137,7 @@ class CVDDTrainer(BaseTrainer):
 
                 # Get attention matrix
                 AAT = A @ A.transpose(1, 2)
-                att_matrix += torch.mean(AAT, 0).cpu().data.numpy()
+                attention_matrix += torch.mean(AAT, 0).cpu().data.numpy()
 
                 epoch_loss += loss.item()
                 n_batches += 1
@@ -136,8 +149,8 @@ class CVDDTrainer(BaseTrainer):
 
             # Save distances per attention head and attention matrix
             self.train_dists = np.concatenate(dists_per_head)
-            self.train_att_matrix = att_matrix / n_batches
-            self.train_att_matrix = self.train_att_matrix.tolist()
+            self.train_attention_matrix = attention_matrix / n_batches
+            self.train_attention_matrix = self.train_attention_matrix.tolist()
 
         self.train_time = time.time() - start_time
 
@@ -171,7 +184,7 @@ class CVDDTrainer(BaseTrainer):
         logger.info('Starting testing...')
         epoch_loss = 0.0
         n_batches = 0
-        att_matrix = np.zeros((n_attention_heads, n_attention_heads))
+        attention_matrix = np.zeros((n_attention_heads, n_attention_heads))
         dists_per_head = ()
         idx_label_score_head = []
         att_weights = []
@@ -179,27 +192,32 @@ class CVDDTrainer(BaseTrainer):
         net.eval()
         with torch.no_grad():
             for data in test_loader:
+                # text_batch 同样是规定的batch大小，和train data_batch是一样的
                 idx, text_batch, label_batch, _ = data
                 text_batch, label_batch = text_batch.to(self.device), label_batch.to(self.device)
 
-                # forward pass
-                cosine_dists, context_weights, A = net(text_batch)
+                # forward pass, net 里边的W1，W2，C保持不变，是一个eval的状态
+                cosine_dists, context_weights, A = net(text_batch) # cosine_dists.shape [32, 3]
+                # """ cheeck the eval process, M1 and M2 change or not. Keeps the same """
+                # # W1, W2 = net.self_attention.W1.weight, net.self_attention.W2.weight
+                # # print('W1, W2:', W1, W2)
+
                 scores = context_weights * cosine_dists
+                loss_emp = torch.mean(torch.sum(scores, dim=1))
                 _, best_att_head = torch.min(scores, dim=1)
 
                 # get orthogonality penalty: P = (CCT - I)
                 I = torch.eye(n_attention_heads).to(self.device)
                 CCT = net.c @ net.c.transpose(1, 2)
-                P = torch.mean((CCT.squeeze() - I) ** 2)
+                P = torch.mean((CCT.squeeze() - I) ** 2) # P is alwaays the same, cause c is fixed during test
 
                 # compute loss
                 loss_P = self.lambda_p * P
-                loss_emp = torch.mean(torch.sum(scores, dim=1))
                 loss = loss_emp + loss_P
 
                 # Save tuples of (idx, label, score, best_att_head) in a list
-                dists_per_head += (cosine_dists.cpu().data.numpy(),)
-                ad_scores = torch.mean(cosine_dists, dim=1)
+                dists_per_head += (cosine_dists.cpu().data.numpy(),) # distance per head 是每个sentence有三个distance score
+                ad_scores = torch.mean(cosine_dists, dim=1) # ad_score size 32, 每一个sentence有一个score，是三个head score的平均值
                 idx_label_score_head += list(zip(idx,
                                                  label_batch.cpu().data.numpy().tolist(),
                                                  ad_scores.cpu().data.numpy().tolist(),
@@ -208,7 +226,7 @@ class CVDDTrainer(BaseTrainer):
 
                 # Get attention matrix
                 AAT = A @ A.transpose(1, 2)
-                att_matrix += torch.mean(AAT, 0).cpu().data.numpy()
+                attention_matrix += torch.mean(AAT, 0).cpu().data.numpy()
 
                 epoch_loss += loss.item()
                 n_batches += 1
@@ -217,8 +235,8 @@ class CVDDTrainer(BaseTrainer):
 
         # Save distances per attention head and attention matrix
         self.test_dists = np.concatenate(dists_per_head)
-        self.test_att_matrix = att_matrix / n_batches
-        self.test_att_matrix = self.test_att_matrix.tolist()
+        self.test_attention_matrix = attention_matrix / n_batches
+        self.test_attention_matrix = self.test_attention_matrix.tolist()
 
         # Save list of (idx, label, score, best_att_head) tuples
         self.test_scores = idx_label_score_head
@@ -275,7 +293,7 @@ def initialize_context_vectors(net, train_loader, device):
     X = ()
     for data in train_loader:
         _, text, _, _ = data
-
+        # text shape is [sentence_length(varies over baches), batch size]
         if torch.cuda.is_available():
             device = torch.device("cuda")
             text = text.to(device)
@@ -306,7 +324,6 @@ def initialize_context_vectors(net, train_loader, device):
 
     kmeans = KMeans(n_clusters=n_attention_heads).fit(X)
     centers = kmeans.cluster_centers_ / np.linalg.norm(kmeans.cluster_centers_, ord=2, axis=1, keepdims=True)
-
     logger.info('Context vectors initialized.')
 
     return centers

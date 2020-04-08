@@ -61,7 +61,7 @@ class CVDD(object):
         self.train_top_words = self.trainer.train_top_words
         self.results['context_vectors'] = self.trainer.c
         self.results['train_time'] = self.trainer.train_time
-        self.results['train_att_matrix'] = self.trainer.train_att_matrix
+        self.results['train_att_matrix'] = self.trainer.train_attention_matrix
 
     def test(self, dataset: BaseADDataset, device: str = 'cuda', n_jobs_dataloader: int = 0):
         """Tests the CVDD model on the test data."""
@@ -76,7 +76,7 @@ class CVDD(object):
         self.test_top_words = self.trainer.test_top_words
         self.test_att_weights = self.trainer.test_att_weights
         self.results['test_time'] = self.trainer.test_time
-        self.results['test_att_matrix'] = self.trainer.test_att_matrix
+        self.results['test_att_matrix'] = self.trainer.test_attention_matrix
         self.results['test_auc'] = self.trainer.test_auc
         self.results['test_scores'] = self.trainer.test_scores
 

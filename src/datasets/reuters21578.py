@@ -85,6 +85,8 @@ class Reuters_Dataset(TorchnlpDataset):
 
         # Make corpus and set encoder
         text_corpus = [row['text'] for row in datasets_iterator(self.train_set, self.test_set)]
+        # wuliyuan i think it should be like this, but the auc result is the same
+        # text_corpus = [row['text'] for row in datasets_iterator(self.train_set)]
         if tokenizer == 'spacy':
             self.encoder = SpacyEncoder(text_corpus, min_occurrences=3, append_eos=append_eos)
         if tokenizer == 'bert':

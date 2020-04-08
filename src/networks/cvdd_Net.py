@@ -39,7 +39,9 @@ class CVDDNet(BaseNet):
         # A.shape = (batch_size, n_attention_heads, sentence_length)
         # M.shape = (batch_size, n_attention_heads, hidden_size)
 
+        # cosine diat = d(ck, mk)
         cosine_dists = 0.5 * (1 - self.cosine_sim(M, self.c))
+        # cosine_weights = sigma(H)
         context_weights = F.softmax(-self.alpha * cosine_dists, dim=1)
 
         return cosine_dists, context_weights, A
