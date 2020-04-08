@@ -49,11 +49,11 @@ class CVDD(object):
     def train(self, dataset: BaseADDataset, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 25,
               lr_milestones: tuple = (), batch_size: int = 64, lambda_p: float = 1.0,
               alpha_scheduler: str = 'logarithmic', weight_decay: float = 0.5e-6, device: str = 'cuda',
-              n_jobs_dataloader: int = 0):
+              n_jobs_dataloader: int = 0, n_neighbors: int = 1000):
         """Trains the CVDD model on the training data."""
         self.optimizer_name = optimizer_name
         self.trainer = CVDDTrainer(optimizer_name, lr, n_epochs, lr_milestones, batch_size, lambda_p, alpha_scheduler,
-                                   weight_decay, device, n_jobs_dataloader)
+                                   weight_decay, device, n_jobs_dataloader, n_neighbors)
         self.net = self.trainer.train(dataset, self.net)
 
         # Get results
@@ -87,6 +87,18 @@ class CVDD(object):
             self.trainer = CVDDTrainer(device, n_jobs_dataloader)
 
         self.trainer.lof_test(dataset, self.net, ad_score=self.ad_score)
+
+        # Get results
+        self.results['test_time'] = self.trainer.test_time
+        self.results['test_auc'] = self.trainer.test_auc
+
+    def lof_test_head_distinct(self, dataset: BaseADDataset, device: str = 'cuda', n_jobs_dataloader: int = 0):
+        """Tests the CVDD model on the test data."""
+
+        if self.trainer is None:
+            self.trainer = CVDDTrainer(device, n_jobs_dataloader)
+
+        self.trainer.lof_test_head_distinct(dataset, self.net, ad_score=self.ad_score)
 
         # Get results
         self.results['test_time'] = self.trainer.test_time

@@ -68,12 +68,14 @@ class PythonLiteralOption(click.Option):
 #               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
 @click.option('--normal_class', cls=PythonLiteralOption, default=[],
               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
-@click.option('--test_method', default='test', type=click.Choice(['test', 'lof_test']))
+@click.option('--test_method', default='test', type=click.Choice(['test', 'lof_test', 'lof_test_head_distinct']))
+@click.option('--n_neighbors', default=1000, type=int)
+
 
 def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, device, seed, tokenizer, clean_txt,
          embedding_size, pretrained_model, ad_score, n_attention_heads, attention_size, lambda_p, alpha_scheduler,
          optimizer_name, lr, n_epochs, lr_milestone, batch_size, weight_decay, n_jobs_dataloader, n_threads,
-         normal_class, test_method):
+         normal_class, test_method, n_neighbors):
     """
     Context Vector Data Description (CVDD): An unsupervised anomaly detection method for text.
     :arg DATASET_NAME: Name of the dataset to load.
@@ -119,6 +121,8 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
     logger.info('Attention size: %d' % cfg.settings['attention_size'])
     logger.info('Orthogonality regularization hyperparameter: %.3f' % cfg.settings['lambda_p'])
     logger.info('Temperature alpha annealing strategy: %s' % cfg.settings['alpha_scheduler'])
+    logger.info('Test method: %s' % cfg.settings['test_method'])
+    logger.info('n_neighbors: %d' % cfg.settings['n_neighbors'])
 
     # If specified, load experiment config from JSON-file
     if load_config:
@@ -181,7 +185,8 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
                alpha_scheduler=cfg.settings['alpha_scheduler'],
                weight_decay=cfg.settings['weight_decay'],
                device=device,
-               n_jobs_dataloader=n_jobs_dataloader)
+               n_jobs_dataloader=n_jobs_dataloader,
+               n_neighbors=n_neighbors)
 
     logger.info('finished CVDD train')
 
@@ -247,9 +252,10 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
         cvdd.save_results(export_json=xp_path + '/results.json')
         cvdd.save_model(export_path=xp_path + '/model.tar')
         cfg.save_config(export_json=xp_path + '/config.json')
-    else:
+    elif test_method == 'lof_test':
         cvdd.lof_test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
-
+    elif test_method == 'lof_test_head_distinct':
+        cvdd.lof_test_head_distinct(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
 
 if __name__ == '__main__':
     main()

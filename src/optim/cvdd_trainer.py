@@ -16,11 +16,11 @@ from sklearn.neighbors import LocalOutlierFactor
 
 class CVDDTrainer(BaseTrainer):
 
-    def __init__(self, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 150, lr_milestones: tuple = (),
-                 batch_size: int = 128, lambda_p: float = 0.0, alpha_scheduler: str = 'hard',
-                 weight_decay: float = 1e-6, device: str = 'cuda', n_jobs_dataloader: int = 0):
+    def __init__(self, optimizer_name: str='adam', lr: float=0.001, n_epochs: int=150, lr_milestones: tuple=(),
+                 batch_size: int=128, lambda_p: float=0.0, alpha_scheduler: str='hard', weight_decay: float=1e-6,
+                 device: str='cuda', n_jobs_dataloader: int=0, n_neighbors: int=1000):
         super().__init__(optimizer_name, lr, n_epochs, lr_milestones, batch_size, weight_decay, device,
-                         n_jobs_dataloader)
+                         n_jobs_dataloader, n_neighbors)
 
         self.lambda_p = lambda_p
         self.c = None
@@ -331,6 +331,66 @@ class CVDDTrainer(BaseTrainer):
         print('pred_labels:', sum(test_pred_labels))
 
         self.test_auc = roc_auc_score(test_labels, test_pred_labels)
+
+        # Log results
+        logger.info('Test AUC: {:.2f}%'.format(100. * self.test_auc))
+        logger.info('Finished testing.')
+
+    def lof_test_head_distinct(self, dataset: BaseADDataset, net: CVDDNet, ad_score='context_dist_mean'):
+        '''Local Outlier Factor method'''
+        logger = logging.getLogger()
+        # Set device for network
+        net = net.to(self.device)
+        # Get train and test data loader
+        train_loader, test_loader = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
+        logger.info('Starting LOF testing...')
+        test_labels = []
+        with torch.no_grad():
+            M_train = ()
+            for data in train_loader:
+                _, train_batch, _, _ = data
+                train_batch = train_batch.to(self.device)
+                train_batch_hidden = net.pretrained_model(train_batch)
+                # Calculate M, using self attention net, eval mode
+                M_train_batch, _ = net.self_attention(train_batch_hidden)
+                M_train += (M_train_batch.cpu().data.numpy(),)
+
+            M_test = ()
+            n_batch = 0
+            for data in test_loader:
+                # text_batch 同样是规定的batch大小，和train data_batch是一样的
+                idx, test_batch, label_batch, _ = data
+                test_batch, label_batch = test_batch.to(self.device), label_batch.to(self.device)
+                test_labels += label_batch.cpu().data.numpy().tolist()
+                test_batch_hidden = net.pretrained_model(test_batch)
+                M_test_batch, _ = net.self_attention(test_batch_hidden)
+                M_test += (M_test_batch.cpu().data.numpy(),)
+
+        M_train = np.concatenate(M_train)
+        M_test = np.concatenate(M_test)
+        M_train_with_heads_devided = []
+        M_test_with_heads_devided = []
+        for h in range(net.n_attention_heads):
+            M_train_with_heads_devided.append(M_train[:, h, :])
+            M_test_with_heads_devided.append(M_test[:, h, :])
+
+        clf = LocalOutlierFactor(n_neighbors=self.n_neighbors, novelty=True, metric='cosine')
+
+        scores = []
+        for h in range(net.n_attention_heads):
+            clf.fit(M_train_with_heads_devided[h])
+            label_pred = clf.predict(M_test_with_heads_devided[h])
+            label_pred = [0 if x == 1 else 1 for x in label_pred]
+            scores.append(label_pred)
+
+        scores = np.array(scores)
+        scores = np.sum(scores, 0)
+        scores = [0 if x==0 else 1 for x in scores]
+
+        print('test_labels:', sum(test_labels))
+        print('scores:', sum(scores))
+
+        self.test_auc = roc_auc_score(test_labels, scores)
 
         # Log results
         logger.info('Test AUC: {:.2f}%'.format(100. * self.test_auc))
