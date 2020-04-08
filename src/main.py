@@ -68,11 +68,12 @@ class PythonLiteralOption(click.Option):
 #               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
 @click.option('--normal_class', cls=PythonLiteralOption, default=[],
               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
+@click.option('--test_method', default='test', type=click.Choice(['test', 'lof_test']))
 
 def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, device, seed, tokenizer, clean_txt,
          embedding_size, pretrained_model, ad_score, n_attention_heads, attention_size, lambda_p, alpha_scheduler,
          optimizer_name, lr, n_epochs, lr_milestone, batch_size, weight_decay, n_jobs_dataloader, n_threads,
-         normal_class):
+         normal_class, test_method):
     """
     Context Vector Data Description (CVDD): An unsupervised anomaly detection method for text.
     :arg DATASET_NAME: Name of the dataset to load.
@@ -185,66 +186,69 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
     logger.info('finished CVDD train')
 
     # Test model
-    cvdd.test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
+    if test_method == 'test':
+        cvdd.test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
 
-    # Print most anomalous and most normal test samples
-    indices, labels, scores, heads = zip(*cvdd.results['test_scores'])
-    indices, scores = np.array(indices), np.array(scores)
-    sort_idx = np.argsort(scores).tolist()  # sorted from lowest to highest anomaly score
-    idx_sorted = indices[sort_idx]
-    idx_normal = idx_sorted[:50].tolist()
-    idx_outlier = idx_sorted[-50:].tolist()[::-1]
-    att_weights = cvdd.test_att_weights
-    att_weights_sorted = [att_weights[i] for i in sort_idx]
-    att_weights_normal = att_weights_sorted[:50]
-    att_weights_outlier = att_weights_sorted[-50:][::-1]
-    heads_sorted = [heads[i] for i in sort_idx]
-    heads_normal = heads_sorted[:50]
-    heads_outlier = heads_sorted[-50:][::-1]
+        # Print most anomalous and most normal test samples
+        indices, labels, scores, heads = zip(*cvdd.results['test_scores'])
+        indices, scores = np.array(indices), np.array(scores)
+        sort_idx = np.argsort(scores).tolist()  # sorted from lowest to highest anomaly score
+        idx_sorted = indices[sort_idx]
+        idx_normal = idx_sorted[:50].tolist()
+        idx_outlier = idx_sorted[-50:].tolist()[::-1]
+        att_weights = cvdd.test_att_weights
+        att_weights_sorted = [att_weights[i] for i in sort_idx]
+        att_weights_normal = att_weights_sorted[:50]
+        att_weights_outlier = att_weights_sorted[-50:][::-1]
+        heads_sorted = [heads[i] for i in sort_idx]
+        heads_normal = heads_sorted[:50]
+        heads_outlier = heads_sorted[-50:][::-1]
 
-    print_text_samples(dataset.test_set, dataset.encoder, idx_normal, export_file=xp_path + '/normals',
-                       att_heads=heads_normal, weights=att_weights_normal, title='Most normal examples')
-    print_text_samples(dataset.test_set, dataset.encoder, idx_outlier, export_file=xp_path + '/outliers',
-                       att_heads=heads_outlier, weights=att_weights_outlier, title='Most anomalous examples')
+        print_text_samples(dataset.test_set, dataset.encoder, idx_normal, export_file=xp_path + '/normals',
+                           att_heads=heads_normal, weights=att_weights_normal, title='Most normal examples')
+        print_text_samples(dataset.test_set, dataset.encoder, idx_outlier, export_file=xp_path + '/outliers',
+                           att_heads=heads_outlier, weights=att_weights_outlier, title='Most anomalous examples')
 
-    # Print top words per context
-    train_top_words, test_top_words = cvdd.train_top_words, cvdd.test_top_words
-    print_top_words(train_top_words, export_file=xp_path + '/top_words_train',
-                    title='Top words per context in train set')
-    print_top_words(test_top_words, export_file=xp_path + '/top_words_test',
-                    title='Top words per context in test set')
+        # Print top words per context
+        train_top_words, test_top_words = cvdd.train_top_words, cvdd.test_top_words
+        print_top_words(train_top_words, export_file=xp_path + '/top_words_train',
+                        title='Top words per context in train set')
+        print_top_words(test_top_words, export_file=xp_path + '/top_words_test',
+                        title='Top words per context in test set')
 
-    # Print context vector correlation matrix
-    if cfg.settings['n_attention_heads'] > 1:
-        context_vectors = np.array(cvdd.results['context_vectors'])
-        corr_mat = get_correlation_matrix(context_vectors)
-        plot_matrix_heatmap(corr_mat, title='Context vectors correlation matrix',
-                            export_pdf=xp_path + '/context_vecs_matrix')
+        # Print context vector correlation matrix
+        if cfg.settings['n_attention_heads'] > 1:
+            context_vectors = np.array(cvdd.results['context_vectors'])
+            corr_mat = get_correlation_matrix(context_vectors)
+            plot_matrix_heatmap(corr_mat, title='Context vectors correlation matrix',
+                                export_pdf=xp_path + '/context_vecs_matrix')
 
-    # Print attention matrix heatmaps
-    if cfg.settings['n_attention_heads'] > 1:
-        train_att_matrix = cvdd.results['train_att_matrix']
-        test_att_matrix = cvdd.results['test_att_matrix']
-        train_att_matrix, test_att_matrix = np.array(train_att_matrix), np.array(test_att_matrix)
-        plot_matrix_heatmap(train_att_matrix, title='Self-attention heads correlation matrix',
-                            export_pdf=xp_path + '/att_heatmap_train')
-        plot_matrix_heatmap(test_att_matrix, title='Self-attention heads correlation matrix',
-                            export_pdf=xp_path + '/att_heatmap_test')
+        # Print attention matrix heatmaps
+        if cfg.settings['n_attention_heads'] > 1:
+            train_att_matrix = cvdd.results['train_att_matrix']
+            test_att_matrix = cvdd.results['test_att_matrix']
+            train_att_matrix, test_att_matrix = np.array(train_att_matrix), np.array(test_att_matrix)
+            plot_matrix_heatmap(train_att_matrix, title='Self-attention heads correlation matrix',
+                                export_pdf=xp_path + '/att_heatmap_train')
+            plot_matrix_heatmap(test_att_matrix, title='Self-attention heads correlation matrix',
+                                export_pdf=xp_path + '/att_heatmap_test')
 
-    # Plot distributions of distances to context vector per attention head
-    train_dists, test_dists = cvdd.train_dists, cvdd.test_dists
-    plot_joyplot(train_dists, title='Distances from context vector per attention head',
-                 export_pdf=xp_path + '/dists_train')
-    plot_joyplot(test_dists[np.array(labels) == 0, :], title='Distances from context vector per attention head',
-                 export_pdf=xp_path + '/dists_test_normals')
-    if np.sum(np.array(labels)) > 0:
-        plot_joyplot(test_dists[np.array(labels) == 1, :], title='Distances from context vector per attention head',
-                     export_pdf=xp_path + '/dists_test_outliers')
+        # Plot distributions of distances to context vector per attention head
+        train_dists, test_dists = cvdd.train_dists, cvdd.test_dists
+        plot_joyplot(train_dists, title='Distances from context vector per attention head',
+                     export_pdf=xp_path + '/dists_train')
+        plot_joyplot(test_dists[np.array(labels) == 0, :], title='Distances from context vector per attention head',
+                     export_pdf=xp_path + '/dists_test_normals')
+        if np.sum(np.array(labels)) > 0:
+            plot_joyplot(test_dists[np.array(labels) == 1, :], title='Distances from context vector per attention head',
+                         export_pdf=xp_path + '/dists_test_outliers')
 
-    # Save results, model, and configuration
-    cvdd.save_results(export_json=xp_path + '/results.json')
-    cvdd.save_model(export_path=xp_path + '/model.tar')
-    cfg.save_config(export_json=xp_path + '/config.json')
+        # Save results, model, and configuration
+        cvdd.save_results(export_json=xp_path + '/results.json')
+        cvdd.save_model(export_path=xp_path + '/model.tar')
+        cfg.save_config(export_json=xp_path + '/config.json')
+    else:
+        cvdd.lof_test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
 
 
 if __name__ == '__main__':

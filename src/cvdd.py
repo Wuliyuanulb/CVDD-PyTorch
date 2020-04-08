@@ -80,6 +80,18 @@ class CVDD(object):
         self.results['test_auc'] = self.trainer.test_auc
         self.results['test_scores'] = self.trainer.test_scores
 
+    def lof_test(self, dataset: BaseADDataset, device: str = 'cuda', n_jobs_dataloader: int = 0):
+        """Tests the CVDD model on the test data."""
+
+        if self.trainer is None:
+            self.trainer = CVDDTrainer(device, n_jobs_dataloader)
+
+        self.trainer.lof_test(dataset, self.net, ad_score=self.ad_score)
+
+        # Get results
+        self.results['test_time'] = self.trainer.test_time
+        self.results['test_auc'] = self.trainer.test_auc
+
     def save_model(self, export_path):
         """Save CVDD model to export_path."""
         # TODO: Implement save_model

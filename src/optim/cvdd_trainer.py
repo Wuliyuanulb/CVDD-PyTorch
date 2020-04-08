@@ -11,6 +11,7 @@ import time
 import torch
 import torch.optim as optim
 import numpy as np
+from sklearn.neighbors import LocalOutlierFactor
 
 
 class CVDDTrainer(BaseTrainer):
@@ -276,6 +277,64 @@ class CVDDTrainer(BaseTrainer):
         logger.info('Test Time: {:.3f}s'.format(self.test_time))
         logger.info('Finished testing.')
 
+    def lof_test(self, dataset: BaseADDataset, net: CVDDNet, ad_score='context_dist_mean'):
+        '''Local Outlier Factor method'''
+        logger = logging.getLogger()
+        # Set device for network
+        net = net.to(self.device)
+        # Get train and test data loader
+        train_loader, test_loader = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
+        logger.info('Starting LOF testing...')
+        test_labels = []
+        with torch.no_grad():
+            M_train = ()
+            for data in train_loader:
+                _, train_batch, _, _ = data
+                train_batch = train_batch.to(self.device)
+                train_batch_hidden = net.pretrained_model(train_batch)
+                # Calculate M, using self attention net, eval mode
+                M_train_batch, _ = net.self_attention(train_batch_hidden)
+                M_train_batch_flatten = M_train_batch.cpu().data.numpy().flatten()
+                M_train_batch = M_train_batch_flatten.reshape(self.batch_size, net.hidden_size * net.n_attention_heads)
+                M_train += (M_train_batch,)
+
+            M_test = ()
+            n_batch = 0
+            for data in test_loader:
+                # text_batch 同样是规定的batch大小，和train data_batch是一样的
+                idx, test_batch, label_batch, _ = data
+                test_batch, label_batch = test_batch.to(self.device), label_batch.to(self.device)
+                test_labels += label_batch.cpu().data.numpy().tolist()
+                test_batch_hidden = net.pretrained_model(test_batch)
+                M_test_batch, _ = net.self_attention(test_batch_hidden)
+                M_test_batch_flatten = M_test_batch.cpu().data.numpy().flatten()
+                M_test_batch = M_test_batch_flatten.reshape(self.batch_size, net.hidden_size * net.n_attention_heads)
+                M_test += (M_test_batch,)
+                n_batch += 1
+
+        print('n_batch:', n_batch)
+        print('len(M_test):', len(M_test))
+        print('M_test[0]:', M_test[0].shape)
+
+        M_train = np.concatenate(M_train)
+        print('M_train:', M_train.shape)
+        M_test = np.concatenate(M_test)
+        print('M_test:', M_test.shape)
+
+        clf = LocalOutlierFactor(n_neighbors=500, novelty=True, metric='cosine')
+        clf.fit(M_train)
+        test_pred_labels = clf.predict(M_test)
+        test_pred_labels = [0 if x == 1 else 1 for x in test_pred_labels]
+        # print('test_pred_labels:', test_pred_labels)
+
+        print('test_labels:', sum(test_labels))
+        print('pred_labels:', sum(test_pred_labels))
+
+        self.test_auc = roc_auc_score(test_labels, test_pred_labels)
+
+        # Log results
+        logger.info('Test AUC: {:.2f}%'.format(100. * self.test_auc))
+        logger.info('Finished testing.')
 
 def initialize_context_vectors(net, train_loader, device):
     """
