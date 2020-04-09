@@ -18,9 +18,17 @@ class CVDDTrainer(BaseTrainer):
 
     def __init__(self, optimizer_name: str='adam', lr: float=0.001, n_epochs: int=150, lr_milestones: tuple=(),
                  batch_size: int=128, lambda_p: float=0.0, alpha_scheduler: str='hard', weight_decay: float=1e-6,
-                 device: str='cuda', n_jobs_dataloader: int=0, n_neighbors: int=1000):
-        super().__init__(optimizer_name, lr, n_epochs, lr_milestones, batch_size, weight_decay, device,
-                         n_jobs_dataloader, n_neighbors)
+                 device: str='cuda', n_jobs_dataloader: int=0, n_neighbors: int=1000, initialize_centers: str='k-means'):
+        super().__init__(optimizer_name=optimizer_name,
+                         lr=lr,
+                         n_epochs=n_epochs,
+                         lr_milestones=lr_milestones,
+                         batch_size=batch_size,
+                         weight_decay=weight_decay,
+                         device=device,
+                         n_jobs_dataloader=n_jobs_dataloader,
+                         n_neighbors=n_neighbors,
+                         initialize_centers=initialize_centers)
 
         self.lambda_p = lambda_p
         self.c = None
@@ -60,13 +68,13 @@ class CVDDTrainer(BaseTrainer):
         train_loader, _ = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
 
         # # Initialize context vectors
-
-        # net.c.data = torch.from_numpy(
-        #     initialize_context_vectors(net, train_loader, self.device)[np.newaxis, :]).to(self.device)
-
-        lda_model = LDA(root='../data/corpora', n_topics=n_attention_heads, n_top_words=30)
-        centers = lda_model.lda_initialize_context_vectors(pretrained_model=net.pretrained_model)
-        net.c.data = torch.from_numpy(centers[np.newaxis, :]).to(self.device)
+        if self.initialize_centers == 'k-means':
+            net.c.data = torch.from_numpy(
+                initialize_context_vectors(net, train_loader, self.device)[np.newaxis, :]).to(self.device)
+        elif self.initialize_centers == 'lda':
+            lda_model = LDA(root='../data/corpora', n_topics=n_attention_heads, n_top_words=30)
+            centers = lda_model.lda_initialize_context_vectors(pretrained_model=net.pretrained_model)
+            net.c.data = torch.from_numpy(centers[np.newaxis, :]).to(self.device)
 
         # Set parameters and optimizer (Adam optimizer for now)
         parameters = filter(lambda p: p.requires_grad, net.parameters())
@@ -312,14 +320,9 @@ class CVDDTrainer(BaseTrainer):
                 M_test += (M_test_batch,)
                 n_batch += 1
 
-        print('n_batch:', n_batch)
-        print('len(M_test):', len(M_test))
-        print('M_test[0]:', M_test[0].shape)
 
         M_train = np.concatenate(M_train)
-        print('M_train:', M_train.shape)
         M_test = np.concatenate(M_test)
-        print('M_test:', M_test.shape)
 
         clf = LocalOutlierFactor(n_neighbors=500, novelty=True, metric='cosine')
         clf.fit(M_train)
@@ -386,9 +389,6 @@ class CVDDTrainer(BaseTrainer):
         scores = np.array(scores)
         scores = np.sum(scores, 0)
         scores = [0 if x==0 else 1 for x in scores]
-
-        print('test_labels:', sum(test_labels))
-        print('scores:', sum(scores))
 
         self.test_auc = roc_auc_score(test_labels, scores)
 

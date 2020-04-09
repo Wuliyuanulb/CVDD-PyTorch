@@ -36,7 +36,7 @@ class PythonLiteralOption(click.Option):
 @click.option('--tokenizer', default='spacy', type=click.Choice(['spacy', 'bert', 'xlnet']),
               help='Select text tokenizer.')
 @click.option('--clean_txt', is_flag=True, help='Specify if text should be cleaned in a pre-processing step.')
-@click.option('--embedding_size', type=int, default=None, help='Size of the word vector embedding.')
+@click.option('--embedding_size', type=int, default=300, help='Size of the word vector embedding.')
 @click.option('--pretrained_model', default=None,
               type=click.Choice([None, 'GloVe_6B', 'GloVe_42B', 'GloVe_840B', 'GloVe_twitter.27B', 'FastText_en',
                                  'bert', 'xlnet']),
@@ -63,6 +63,7 @@ class PythonLiteralOption(click.Option):
               help='Number of workers for data loading. 0 means that the data will be loaded in the main process.')
 @click.option('--n_threads', type=int, default=0,
               help='Sets the number of OpenMP threads used for parallelizing CPU operations')
+@click.option('--initialize_centers', type=click.Choice(['k-means', 'lda']), default='k-means')
 
 # @click.option('--normal_class', type=list, default=[0],
 #               help='Specify the normal class of the dataset (all other classes are considered anomalous).')
@@ -75,7 +76,7 @@ class PythonLiteralOption(click.Option):
 def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, device, seed, tokenizer, clean_txt,
          embedding_size, pretrained_model, ad_score, n_attention_heads, attention_size, lambda_p, alpha_scheduler,
          optimizer_name, lr, n_epochs, lr_milestone, batch_size, weight_decay, n_jobs_dataloader, n_threads,
-         normal_class, test_method, n_neighbors):
+         normal_class, initialize_centers, test_method, n_neighbors):
     """
     Context Vector Data Description (CVDD): An unsupervised anomaly detection method for text.
     :arg DATASET_NAME: Name of the dataset to load.
@@ -121,6 +122,7 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
     logger.info('Attention size: %d' % cfg.settings['attention_size'])
     logger.info('Orthogonality regularization hyperparameter: %.3f' % cfg.settings['lambda_p'])
     logger.info('Temperature alpha annealing strategy: %s' % cfg.settings['alpha_scheduler'])
+    logger.info(('Initialize_centers method: %s') % cfg.settings['initialize_centers'])
     logger.info('Test method: %s' % cfg.settings['test_method'])
     logger.info('n_neighbors: %d' % cfg.settings['n_neighbors'])
 
@@ -186,7 +188,8 @@ def main(dataset_name, net_name, xp_path, data_path, load_config, load_model, de
                weight_decay=cfg.settings['weight_decay'],
                device=device,
                n_jobs_dataloader=n_jobs_dataloader,
-               n_neighbors=n_neighbors)
+               n_neighbors=n_neighbors,
+               initialize_centers=initialize_centers)
 
     logger.info('finished CVDD train')
 

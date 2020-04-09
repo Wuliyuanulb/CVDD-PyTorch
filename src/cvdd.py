@@ -49,11 +49,11 @@ class CVDD(object):
     def train(self, dataset: BaseADDataset, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 25,
               lr_milestones: tuple = (), batch_size: int = 64, lambda_p: float = 1.0,
               alpha_scheduler: str = 'logarithmic', weight_decay: float = 0.5e-6, device: str = 'cuda',
-              n_jobs_dataloader: int = 0, n_neighbors: int = 1000):
+              n_jobs_dataloader: int = 0, n_neighbors: int = 1000, initialize_centers: str='k-means'):
         """Trains the CVDD model on the training data."""
         self.optimizer_name = optimizer_name
         self.trainer = CVDDTrainer(optimizer_name, lr, n_epochs, lr_milestones, batch_size, lambda_p, alpha_scheduler,
-                                   weight_decay, device, n_jobs_dataloader, n_neighbors)
+                                   weight_decay, device, n_jobs_dataloader, n_neighbors, initialize_centers)
         self.net = self.trainer.train(dataset, self.net)
 
         # Get results
